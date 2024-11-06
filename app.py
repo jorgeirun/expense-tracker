@@ -1,10 +1,11 @@
-from flask import Flask, jsonify
+from flask import Flask
 import strawberry
 from strawberry.flask.views import GraphQLView
 from sqlalchemy import create_engine, Column, Integer, String, Float, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
+from typing import Optional
 
 
 DATABASE_URL = "sqlite:///db.db"
@@ -67,6 +68,7 @@ class Query:
         ]
 
 # GraphQL Mutations
+# Create
 @strawberry.type
 class Mutation:
     @strawberry.mutation
@@ -86,17 +88,73 @@ class Mutation:
             date=str(expense.date),
             category=expense.category
         )
+    
+    # Edit
+    @strawberry.mutation
+    def update_expense(
+        self,
+        id: int,
+        amount: Optional[float] = None,
+        description: Optional[str] = None,
+        date: Optional[str] = None,
+        category: Optional[str] = None
+    ) -> ExpenseType:
+        db = SessionLocal()
+        expense = db.query(Expense).filter(Expense.id == id).first()
+
+        if expense is None:
+            db.close()
+            raise ValueError("Expense not found")
+
+        # Update fields only if new values are provided
+        if amount is not None:
+            expense.amount = amount
+        if description is not None:
+            expense.description = description
+        if date is not None:
+            expense.date = datetime.strptime(date, "%Y-%m-%d").date()
+        if category is not None:
+            expense.category = category
+
+        db.commit()
+        db.refresh(expense)
+        db.close()
+        
+        return ExpenseType(
+            id=expense.id,
+            amount=expense.amount,
+            description=expense.description,
+            date=str(expense.date),
+            category=expense.category
+        )
+
+    # Delete
+    @strawberry.mutation
+    def delete_expense(self, id: int) -> str:
+        db = SessionLocal()
+        expense = db.query(Expense).filter(Expense.id == id).first()
+
+        # If the expense is not found, return an error message
+        if expense is None:
+            db.close()
+            return "Expense not found"
+
+        # Delete the expense
+        db.delete(expense)
+        db.commit()
+        db.close()
+        
+        return "Expense deleted successfully"
+
 
 
 # Create the GraphQL schema
 schema = strawberry.Schema(query=Query, mutation=Mutation)
 
-
-
 # Flask application setup
 app = Flask(__name__)
 app.add_url_rule("/graphql/expenses", view_func=GraphQLView.as_view("graphql_view", schema=schema))
 
+# Main
 if __name__ == "__main__":
     app.run(debug=True)
-
