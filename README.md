@@ -94,6 +94,33 @@ mutation {
 }
 ```
 
+#### Search Expenses with Pagination (by description or category)
+This search query filters expenses by description and category, returning the first 5 results.
+
+```
+query {
+  searchExpenses(description: "lunch", limit: 5) {
+    id
+    amount
+    description
+    date
+    category
+  }
+}
+```
+
+```
+query {
+  searchExpenses(category: "Food", limit: 5) {
+    id
+    amount
+    description
+    date
+    category
+  }
+}
+```
+
 #### List Expenses with Pagination
 ```
 query {
