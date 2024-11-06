@@ -70,6 +70,38 @@ class Query:
             for expense in expenses
         ]
 
+    # Search Expenses
+    @strawberry.field
+    def search_expenses(
+        self,
+        description: Optional[str] = None,
+        category: Optional[str] = None,
+        limit: Optional[int] = 10,
+        offset: Optional[int] = 0
+    ) -> list[ExpenseType]:
+        db = SessionLocal()
+        
+        query = db.query(Expense)
+        
+        if description:
+            query = query.filter(Expense.description.ilike(f"%{description}%"))
+        if category:
+            query = query.filter(Expense.category == category)
+
+        expenses = query.offset(offset).limit(limit).all()
+        db.close()
+
+        return [
+            ExpenseType(
+                id=expense.id,
+                amount=expense.amount,
+                description=expense.description,
+                date=str(expense.date),
+                category=expense.category
+            )
+            for expense in expenses
+        ]
+
 # GraphQL Mutations
 # Create
 @strawberry.type
