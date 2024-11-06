@@ -7,12 +7,13 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 from typing import Optional
 
-
+# DB setup
 DATABASE_URL = "sqlite:///db.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+# Model
 class Expense(Base):
     __tablename__ = "expenses"
 
@@ -38,6 +39,7 @@ class ExpenseType:
 # GraphQL Queries
 @strawberry.type
 class Query:
+    # Get by ID
     @strawberry.field
     def get_expense(self, id: int) -> ExpenseType:
         db = SessionLocal()
@@ -51,10 +53,11 @@ class Query:
             category=expense.category
         ) if expense else None
 
+    # List all
     @strawberry.field
-    def list_expenses(self) -> list[ExpenseType]:
+    def list_expenses(self, limit: Optional[int] = 10, offset: Optional[int] = 0) -> list[ExpenseType]:
         db = SessionLocal()
-        expenses = db.query(Expense).all()
+        expenses = db.query(Expense).offset(offset).limit(limit).all()
         db.close()
         return [
             ExpenseType(
